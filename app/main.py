@@ -127,6 +127,49 @@ def change_layer_style(n_clicks=None):
     return choose_layer_style(n_clicks)
 
 
+@app.callback(
+    Output("login-modal", "is_open"),
+    Input("close-login", 'n_clicks'),
+    State("login-modal", "is_open")
+)
+def open_login_modal(id, is_open):
+    return not is_open
+
+@app.callback(
+    [Output('password_area', 'children'),
+     Output('username_input', 'disabled')],
+    Input('username_input', 'value')
+)
+def display_password_area(username):
+    if username is None or '':
+        raise PreventUpdate
+
+    children = [
+        dcc.Markdown('---'),
+        html.P("Mot de passe :"),
+        dcc.Input(
+            id='password_input',
+            type='password',
+            placeholder="Tapez votre mot de passe et appuyez sur 'Entrer'",
+            debounce=True,
+            style={'width': '500px'}
+            )
+        ]
+
+    return children, True
+
+@app.callback(
+    Output('close-login-area', 'style'),
+    Input('password_input', 'value'),
+    State('username_input', 'value')
+)
+def display_close_modal_button(password, username):
+    if password is None or '':
+        raise PreventUpdate
+
+    return {'display': 'block'}
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Callbacks related to the "Alerts and Infrastructure" view
 

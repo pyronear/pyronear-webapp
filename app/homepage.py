@@ -334,6 +334,40 @@ def Homepage():
             ]
         ),
 
+        dbc.Modal(
+            [
+                dbc.ModalHeader("Espace d'identification"),
+                dbc.ModalBody(
+                    html.Div(
+                        [
+                            html.P("Nom d'utilisateur :"),
+                            dcc.Input(
+                                id='username_input',
+                                type='text',
+                                placeholder="Tapez votre nom d'utilisateur et appuyez sur 'Entrer'",
+                                debounce=True,
+                                style={'width': '500px'}
+                            ),
+                            html.Div(
+                                id='password_area'
+                            )
+                            ,
+                        ],
+                        id='login_area'
+                    )
+                ),
+                dbc.ModalFooter(
+                    html.Div(
+                        id='close-login-area',
+                        children=dbc.Button("Close", id="close-login", className="ml-auto"),
+                        style={'display': 'none'}
+                    )
+                ),
+            ],
+            id="login-modal",
+            size="lg",
+        ),
+
         # Meteo graphs added here
         display_meteo_graphs(display=False)
     ],
