@@ -53,6 +53,9 @@ from risks import build_risks_geojson_and_colorbar
 from utils import choose_layer_style, build_info_box, build_info_object,\
     build_live_alerts_metadata, build_historic_markers, build_legend_box
 
+from geopy import Point
+from geopy.distance import geodesic
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # APP INSTANTIATION & OVERALL LAYOUT
@@ -80,6 +83,9 @@ cache = Cache(app.server, config={
 alert_metadata = build_live_alerts_metadata()
 alert_id = alert_metadata["id"]
 
+site_devices = [{'id': 1, 'yaw': 30, 'opening_angle': 100, 'site_id': 1},
+                {'id': 2, 'yaw': 125, 'opening_angle': 100, 'site_id': 1}]
+distKm = 1.5
 
 # ----------------------------------------------------------------------------------------------------------------------
 # CALLBACKS
@@ -127,47 +133,57 @@ def change_layer_style(n_clicks=None):
     return choose_layer_style(n_clicks)
 
 
-@app.callback(
-    Output("login-modal", "is_open"),
-    Input("close-login", 'n_clicks'),
-    State("login-modal", "is_open")
-)
-def open_login_modal(id, is_open):
-    return not is_open
+# @app.callback(
+#     Output("login-modal", "is_open"),
+#     Input("close-login", 'n_clicks'),
+#     State("login-modal", "is_open")
+# )
+# def open_login_modal(id, is_open):
+#     return not is_open
+
+# @app.callback(
+#     [Output('password_area', 'children'),
+#      Output('username_input', 'disabled')],
+#     Input('username_input', 'value')
+# )
+# def display_password_area(username):
+#     if username is None or '':
+#         raise PreventUpdate
+
+#     children = [
+#         dcc.Markdown('---'),
+#         html.P("Mot de passe :"),
+#         dcc.Input(
+#             id='password_input',
+#             type='password',
+#             placeholder="Tapez votre mot de passe et appuyez sur 'Entrer'",
+#             debounce=True,
+#             style={'width': '500px'}
+#             )
+#         ]
+
+#     return children, True
 
 @app.callback(
-    [Output('password_area', 'children'),
-     Output('username_input', 'disabled')],
-    Input('username_input', 'value')
+    [Output('login-modal', 'is_open'),
+     Output('form_feedback_area', 'children')],
+    Input('send_form_button', 'n_clicks'),
+    [State('username_input', 'value'),
+     State('password_input', 'value')]
 )
-def display_password_area(username):
-    if username is None or '':
-        raise PreventUpdate
+def display_close_modal_button(n_clicks, username, password):
+    if n_clicks is None:
+        return True, None
 
-    children = [
-        dcc.Markdown('---'),
-        html.P("Mot de passe :"),
-        dcc.Input(
-            id='password_input',
-            type='password',
-            placeholder="Tapez votre mot de passe et appuyez sur 'Entrer'",
-            debounce=True,
-            style={'width': '500px'}
-            )
-        ]
+    form_feedback = [dcc.Markdown('---')]
 
-    return children, True
+    if username is None or password is None:
+        form_feedback.append(html.P("Il semble qu'il manque votre nom d'utilisateur et/ou votre mot de passe."))
+        return True, form_feedback
 
-@app.callback(
-    Output('close-login-area', 'style'),
-    Input('password_input', 'value'),
-    State('username_input', 'value')
-)
-def display_close_modal_button(password, username):
-    if password is None or '':
-        raise PreventUpdate
-
-    return {'display': 'block'}
+    else:
+        form_feedback.append(html.P("Vous êtes connecté, bienvenue sur la plateforme Pyronear !"))
+        return False, form_feedback
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -286,6 +302,53 @@ def change_zoom_center(n_clicks, map_style_button_label):
 
     elif map_style == 'risks':
         raise PreventUpdate
+
+
+@app.callback(
+    Output('device_polygons', 'children'),
+    [Input(f'checkbox_site_{i}', 'value') for i in range(4)], # Replace 4 by the number of sites (ie. variabilize it)
+    [State(f'site_{i}', 'position') for i in range(4)] # Replace 4 by the number of sites (ie. variabilize it)
+)
+def display_device_polygons(*args):
+    ctx = dash.callback_context
+
+    if not ctx.triggered:
+        raise PreventUpdate
+
+    else:
+        polygons = []
+
+        for i, checkbox_value in enumerate(args[:4]):
+            if len(checkbox_value) != 0 and checkbox_value[0] == 1:
+                site_position = args[4 + i]
+
+                lat = site_position[0]
+                lon = site_position[1]
+
+                # get_site_devices to be called here
+
+                yaw = 270
+                opening_angle = 90
+
+                center = [lat, lon]
+                points1 = []
+                points2 = []
+
+                for i in reversed(range(1, opening_angle+1)):
+                    yaw1 = (yaw - i/2) % 360
+                    yaw2 = (yaw + i/2) % 360
+
+                    point = geodesic(kilometers=distKm).destination(Point(lat, lon), yaw1)
+                    points1.append([point.latitude, point.longitude])
+
+                    point = geodesic(kilometers=distKm).destination(Point(lat, lon), yaw2)
+                    points2.append([point.latitude, point.longitude])
+
+                points = [center] + points1 + list(reversed(points2))
+
+                polygons.append(dl.Polygon(color="#ff7800", positions=points, children=[dl.Popup(html.P('Device #1'))]))
+
+        return polygons
 
 
 # ----------------------------------------------------------------------------------------------------------------------

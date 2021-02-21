@@ -43,6 +43,9 @@ from utils import build_layer_style_button, build_live_alerts_metadata
 # ----------------------------------------------------------------------------------------------------------------------
 # CONTENT
 
+# Pyronear - Horizontal Logo
+pyro_logo = 'https://pyronear.org/img/logo_letters.png'
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Alert simulation
 # The following block is used to create the radio button that allows to simulate alerts.
@@ -336,33 +339,73 @@ def Homepage():
 
         dbc.Modal(
             [
-                dbc.ModalHeader("Espace d'identification"),
                 dbc.ModalBody(
-                    html.Div(
                         [
-                            html.P("Nom d'utilisateur :"),
-                            dcc.Input(
-                                id='username_input',
-                                type='text',
-                                placeholder="Tapez votre nom d'utilisateur et appuyez sur 'Entrer'",
-                                debounce=True,
-                                style={'width': '500px'}
+                            html.Center(
+                                dbc.Col(
+                                    [
+                                        html.Img(src=pyro_logo, width="250px"),
+                                        dcc.Markdown('---'),
+                                        dbc.FormGroup(
+                                            [
+                                                dbc.Input(
+                                                    id='username_input',
+                                                    type='text',
+                                                    placeholder="UTILISATEUR",
+                                                    style={'width': '250px'}
+                                                )
+                                            ],
+                                        ),
+                                        dbc.FormGroup(
+                                            [
+                                                dbc.Input(
+                                                    id='password_input',
+                                                    type='password',
+                                                    placeholder='MOT DE PASSE',
+                                                    style={'width': '250px'}
+                                                )
+                                            ],
+                                        ),
+                                    ],
+                                    align='center'
+                                ),
                             ),
-                            html.Div(
-                                id='password_area'
-                            )
-                            ,
-                        ],
-                        id='login_area'
-                    )
+                            html.Center(dbc.Button(
+                                "Connexion",
+                                id='send_form_button',
+                                color='primary',
+                                style={'margin-right': '7px'},
+                                className='ml-3')
+                            ),
+                            html.Div(id='form_feedback_area')
+                        ]
                 ),
-                dbc.ModalFooter(
-                    html.Div(
-                        id='close-login-area',
-                        children=dbc.Button("Close", id="close-login", className="ml-auto"),
-                        style={'display': 'none'}
-                    )
-                ),
+                # dbc.ModalBody(
+                #     html.Div(
+                #         [
+                #             html.P("Nom d'utilisateur :"),
+                #             dcc.Input(
+                #                 id='username_input',
+                #                 type='text',
+                #                 placeholder="Tapez votre nom d'utilisateur et appuyez sur 'Entrer'",
+                #                 debounce=True,
+                #                 style={'width': '500px'}
+                #             ),
+                #             html.Div(
+                #                 id='password_area'
+                #             )
+                #             ,
+                #         ],
+                #         id='login_area'
+                #     )
+                # ),
+                # dbc.ModalFooter(
+                #     html.Div(
+                #         id='close-login-area',
+                #         children=dbc.Button("Fermer", id="close-login", className="ml-auto"),
+                #         style={'display': 'none'}
+                #     )
+                # ),
             ],
             id="login-modal",
             size="lg",

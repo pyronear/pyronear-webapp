@@ -104,12 +104,28 @@ def build_sites_markers(dpt_code=None):
         site_name = row['Tours']
         nb_device = row['Nombres Devices']
         markers.append(dl.Marker(id=f'site_{i}',    # Necessary to set an id for each marker to receive callbacks
-                                 position=(lat, lon),
-                                 icon=icon,
-                                 children=[dl.Tooltip(site_name),
-                                           dl.Popup([html.H2(f'Site {site_name}'),
-                                                     html.P(f'Coordonnées : ({lat}, {lon})'),
-                                                     html.P(f'Nombre de caméras : {nb_device}')])]))
+                                     position=(lat, lon),
+                                     icon=icon,
+                                     children=[
+                                        dl.Tooltip(site_name),
+                                        dl.Popup(
+                                            [
+                                                html.H2(f'Site {site_name}'),
+                                                html.P(f'Coordonnées : ({lat}, {lon})'),
+                                                html.P(f'Nombre de caméras : {nb_device}'),
+                                                dcc.Markdown('---'),
+                                                dcc.Checklist(
+                                                    options=[
+                                                        {'label': 'Afficher la couverture des caméras', 'value': 1}
+                                                    ],
+                                                    value=[],
+                                                    id=f'checkbox_site_{i}'
+                                                )
+                                            ]
+                                        )
+                                              ]
+                                    )
+            )
 
     # We group all dl.Marker objects in a dl.MarkerClusterGroup object and return it
     return dl.MarkerClusterGroup(children=markers, id='sites_markers')
@@ -257,7 +273,8 @@ def build_alerts_map():
                             build_legend_box(map_type='alerts'),
                             build_sites_markers(),
                             html.Div(id="live_alerts_marker"),
-                            html.Div(id='fire_markers_alerts')],  # Will contain the past fire markers of the alerts map
+                            html.Div(id='fire_markers_alerts'),  # Will contain the past fire markers of the alerts map
+                            dl.LayerGroup(id='device_polygons')],
                         style=map_style,      # Reminder: map_style is imported from utils.py
                         id='map')
 
