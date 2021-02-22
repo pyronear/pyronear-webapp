@@ -346,7 +346,14 @@ def display_device_polygons(*args):
 
                 points = [center] + points1 + list(reversed(points2))
 
-                polygons.append(dl.Polygon(color="#ff7800", positions=points, children=[dl.Popup(html.P('Device #1'))]))
+                polygons.append(
+                    dl.Polygon(
+                        color="#ff7800",
+                        opacity=0.5,
+                        positions=points,
+                        children=[dl.Popup(html.P('Device #1'))]
+                    )
+                )
 
         return polygons
 

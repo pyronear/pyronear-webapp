@@ -119,7 +119,8 @@ def build_sites_markers(dpt_code=None):
                                                         {'label': 'Afficher la couverture des caméras', 'value': 1}
                                                     ],
                                                     value=[],
-                                                    id=f'checkbox_site_{i}'
+                                                    id=f'checkbox_site_{i}',
+                                                    inputStyle={"margin-right": "10px"}
                                                 )
                                             ]
                                         )

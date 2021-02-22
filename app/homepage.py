@@ -344,8 +344,9 @@ def Homepage():
                             html.Center(
                                 dbc.Col(
                                     [
-                                        html.Img(src=pyro_logo, width="250px"),
-                                        dcc.Markdown('---'),
+                                        html.Div(style={'height': '10px'}),
+                                        html.Img(src=pyro_logo, width="190px"),
+                                        html.Div(style={'height': '30px'}),
                                         dbc.FormGroup(
                                             [
                                                 dbc.Input(
@@ -370,15 +371,21 @@ def Homepage():
                                     align='center'
                                 ),
                             ),
-                            html.Center(dbc.Button(
-                                "Connexion",
-                                id='send_form_button',
-                                color='primary',
-                                style={'margin-right': '7px'},
-                                className='ml-3')
+                            html.Div(style={'height': '15px'}),
+                            html.Center(
+                                dbc.Button(
+                                    "Connexion",
+                                    id='send_form_button',
+                                    color='primary',
+                                    className='ml-3'
+                                ),
                             ),
+                            html.Div(style={'height': '15px'}),
                             html.Div(id='form_feedback_area')
-                        ]
+                        ],
+                        style={
+                            'background': '#F8FAFF'
+                        }
                 ),
                 # dbc.ModalBody(
                 #     html.Div(
@@ -408,7 +415,7 @@ def Homepage():
                 # ),
             ],
             id="login-modal",
-            size="lg",
+            style={"max-width": "none", "width": "500px"}
         ),
 
         # Meteo graphs added here
