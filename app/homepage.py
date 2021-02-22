@@ -322,11 +322,11 @@ def Homepage():
                         n_intervals=0),
 
                     # Two placeholders updated by callbacks in main.py to trigger a change in map style
-                    html.Div(id='map_style_btn_switch_view'),   # Associated with the main map style button
-                    html.Div(id='alert_btn_switch_view'),   # Associated with the alert banner in risks mode
+                    html.Div(id='map_style_btn_switch_view', style={'display': 'none'}),   # For main map style button
+                    html.Div(id='alert_btn_switch_view', style={'display': 'none'}),   # For the alert banner in risks mode
 
                     # Simple placeholder - Source of truth for the map style being viewed
-                    html.Div(id='current_map_style', children='alerts'),
+                    html.Div(id='current_map_style', children='alerts', style={'display': 'none'}),
 
                     # Hidden html.Div storing the URL address of the detection frame of the latest alert
                     html.Div(id='img_url', style={'display': 'none'})],

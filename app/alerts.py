@@ -31,7 +31,7 @@ import dash_leaflet as dl
 import dash_leaflet.express as dlx
 
 # Various imports from utils.py, useful for both Alerts and Risks dashboards
-from utils import map_style, build_info_object, build_legend_box
+from utils import map_style, build_info_object, build_legend_box, build_historic_fires_switch
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -257,7 +257,8 @@ def build_alerts_map():
                             build_legend_box(map_type='alerts'),
                             build_sites_markers(),
                             html.Div(id="live_alerts_marker"),
-                            html.Div(id='fire_markers_alerts')],  # Will contain the past fire markers of the alerts map
+                            html.Div(id='fire_markers_alerts'),  # Will contain the past fire markers of the alerts map
+                            build_historic_fires_switch()],
                         style=map_style,      # Reminder: map_style is imported from utils.py
                         id='map')
 

@@ -51,7 +51,7 @@ from homepage import choose_map_style, display_alerts_frames
 from alerts import define_map_zoom_center, build_alerts_elements
 from risks import build_risks_geojson_and_colorbar
 from utils import choose_layer_style, build_info_box, build_info_object,\
-    build_live_alerts_metadata, build_historic_markers, build_legend_box
+    build_live_alerts_metadata, build_historic_markers, build_legend_box, build_historic_fires_switch
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ def hover_department_alerts(hovered_department):
 @app.callback(
     Output('fire_markers_alerts', 'children'),
     [Input('geojson_departments', 'click_feature'),
-     Input('historic_fires_radio_button', 'value')]
+     Input('historic_fires_switch', 'on')]
 )
 def click_department_alerts(feature, radio_button_value):
     """
@@ -168,7 +168,7 @@ def click_department_alerts(feature, radio_button_value):
     - if the user has selected "Yes", we fill it in with the relevant information.
     """
     if feature is not None:
-        if radio_button_value == 1:
+        if radio_button_value:
             return build_historic_markers(dpt_code=feature['properties']['code'])
         else:
             return None
@@ -282,7 +282,8 @@ def change_color_opacity(opacity_level):
             build_info_object(map_type='risks'),
             build_legend_box(map_type='risks'),
             html.Div(id='fire_markers_risks'),  # Will contain the past fire markers of the risks map
-            html.Div(id='live_alerts_marker')
+            html.Div(id='live_alerts_marker'),
+            build_historic_fires_switch()
             ]
 
 

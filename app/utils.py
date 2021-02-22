@@ -25,6 +25,7 @@ import datetime as dt
 # Various modules provided by Dash to build app components
 import dash_html_components as html
 import dash_leaflet as dl
+import dash_daq as daq
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -125,7 +126,8 @@ def build_info_object(map_type):
                     style={'position': 'absolute',
                            'top': '10px',
                            'right': '10px',
-                           'z-index': '1000'}
+                           'z-index': '1000',
+                           'background-color': '#F8FAFF'}
                     )
 
 
@@ -185,7 +187,8 @@ def build_legend_box(map_type=None):
                     style={'position': 'absolute',
                            'bottom': '30px',
                            'right': '10px',
-                           'z-index': '1000'}
+                           'z-index': '1000',
+                           'background-color': '#F8FAFF'}
                     )
 
 
@@ -280,3 +283,56 @@ def build_live_alerts_metadata():
     }
 
     return alert_metadata
+
+
+def build_historic_fires_switch():
+    """
+    This function builds upon the build_info_box function defined above.
+
+    It takes as input the type of map considered (either 'alerts' or 'risks') and returns
+    an information box object located in the top-right corner of the map with a relevant id.
+    """
+    # label = {
+    #     'label': 'Historique incendies',
+    #     'style': {
+    #         'position': 'left'
+    #     }
+    # }
+
+    obj = html.Div(
+            [
+                html.Div(
+                    html.P('Historique incendies'),
+                    style={
+                        'display': 'inline-block',
+                        'height': '22px',
+                        'margin-right': '2px',
+                    }
+                ),
+                html.Div(
+                    daq.BooleanSwitch(
+                                    id='historic_fires_switch',
+                                    on=False,
+                                    color='#65B5FF'
+                    ),
+                    style={
+                        'display': 'inline-block',
+                        'height': '22px',
+                        'margin-left': '7px',
+                    }
+                )
+            ],
+            id='historic_fires_switch_container',
+            className='info',
+            style={
+                'position': 'absolute',
+                'top': '10px',
+                'left': '70px',
+                'z-index': '1000',
+                # 'display': 'inline-block',
+                'background-color': '#F8FAFF',
+            }
+    )
+
+    return obj
+
