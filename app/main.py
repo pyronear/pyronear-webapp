@@ -56,6 +56,8 @@ from utils import choose_layer_style, build_info_box, build_info_object,\
 from geopy import Point
 from geopy.distance import geodesic
 
+from pyroclient import Client
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # APP INSTANTIATION & OVERALL LAYOUT
@@ -133,58 +135,50 @@ def change_layer_style(n_clicks=None):
     return choose_layer_style(n_clicks)
 
 
-# @app.callback(
-#     Output("login-modal", "is_open"),
-#     Input("close-login", 'n_clicks'),
-#     State("login-modal", "is_open")
-# )
-# def open_login_modal(id, is_open):
-#     return not is_open
-
-# @app.callback(
-#     [Output('password_area', 'children'),
-#      Output('username_input', 'disabled')],
-#     Input('username_input', 'value')
-# )
-# def display_password_area(username):
-#     if username is None or '':
-#         raise PreventUpdate
-
-#     children = [
-#         dcc.Markdown('---'),
-#         html.P("Mot de passe :"),
-#         dcc.Input(
-#             id='password_input',
-#             type='password',
-#             placeholder="Tapez votre mot de passe et appuyez sur 'Entrer'",
-#             debounce=True,
-#             style={'width': '500px'}
-#             )
-#         ]
-
-#     return children, True
-
 @app.callback(
     [Output('login-modal', 'is_open'),
-     Output('form_feedback_area', 'children')],
+     Output('form_feedback_area', 'children'),
+     Output('instantiated_client', 'children')],
     Input('send_form_button', 'n_clicks'),
     [State('username_input', 'value'),
      State('password_input', 'value')]
 )
-def display_close_modal_button(n_clicks, username, password):
+def manage_login_modal(n_clicks, username, password):
     if n_clicks is None:
-        return True, None
+        return True, None, ''
 
     form_feedback = [dcc.Markdown('---')]
 
-    if username is None or password is None:
+    if username is None or password is None or len(username) == 0 or len(password) == 0:
         form_feedback.append(html.P("Il semble qu'il manque votre nom d'utilisateur et/ou votre mot de passe."))
-        return True, form_feedback
+        return True, form_feedback, ''
 
     else:
-        form_feedback.append(html.P("Vous êtes connecté, bienvenue sur la plateforme Pyronear !"))
-        return False, form_feedback
 
+        try:
+            client = Client(
+                    api_url='http://pyronear-api.herokuapp.com',
+                    credentials_login=username,
+                    credentials_password=password
+            )
+            form_feedback.append(html.P("Vous êtes connecté, bienvenue sur la plateforme Pyronear !"))
+            return False, form_feedback, 'client'
+
+        except:
+            form_feedback.append(html.P("Nom d'utilisateur ou mot de passe erroné."))
+            return True, form_feedback, ''
+
+
+@app.callback(
+    Output('login_background', 'children'),
+    Input('login-modal', 'is_open')
+)
+def clean_login_background(is_modal_opened):
+    if is_modal_opened:
+        raise PreventUpdate
+
+    else:
+        return ''
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Callbacks related to the "Alerts and Infrastructure" view

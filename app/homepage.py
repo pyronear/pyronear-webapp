@@ -284,6 +284,72 @@ def display_meteo_graphs(display=False):
         # If the 'display' argument is False, the function returns a void string
         return ''
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Login modal
+# The following block defines the build_login_modal, which allows to instantiate the modal opened at the beginning of
+# each session for the user to enter his/her credentials.
+
+def build_login_modal():
+    """
+    This function simply creates and returns the login modal, which opens up at the beginning of each session to obtain
+    the credentials of the user.
+    """
+    return dbc.Modal(
+        [
+            dbc.ModalBody(
+                [
+                    html.Center(
+                        dbc.Col(
+                            [
+                                html.Div(style={'height': '10px'}),
+                                html.Img(src=pyro_logo, width="190px"),
+                                html.Div(style={'height': '30px'}),
+                                dbc.FormGroup(
+                                    [
+                                        dbc.Input(
+                                            id='username_input',
+                                            type='text',
+                                            placeholder="UTILISATEUR",
+                                            style={'width': '250px'},
+                                            autoFocus=True
+                                        )
+                                    ],
+                                ),
+                                dbc.FormGroup(
+                                    [
+                                        dbc.Input(
+                                            id='password_input',
+                                            type='password',
+                                            placeholder='MOT DE PASSE',
+                                            style={'width': '250px'},
+                                        )
+                                    ],
+                                ),
+                            ],
+                            align='center'
+                        ),
+                    ),
+                    html.Div(style={'height': '15px'}),
+                    html.Center(
+                        dbc.Button(
+                            "Connexion",
+                            id='send_form_button',
+                            color='primary',
+                            className='ml-3'
+                        ),
+                    ),
+                    html.Div(style={'height': '15px'}),
+                    html.Div(id='form_feedback_area')
+                ],
+                style={'background': '#F8FAFF'}
+            ),
+        ],
+        id="login-modal",
+        backdrop='static',
+        keyboard=False,
+        style={"max-width": "none", "width": "500px"}
+    )
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # App layout
@@ -300,6 +366,15 @@ def Homepage():
     body = dbc.Container([
         # Markdown separator below the navigation bar
         dbc.Row(dcc.Markdown('---')),
+
+        html.Center(
+                html.Div(
+                    id='login_background',
+                    children=[
+                        html.Img(src='assets/background.png', width="100%")
+                    ]
+                )
+            ),
 
         # Optional radio button to simulate alert events in debugging mode
         dbc.Row(dbc.Col(id='live_alert_header_btn')),
@@ -325,11 +400,22 @@ def Homepage():
                         n_intervals=0),
 
                     # Two placeholders updated by callbacks in main.py to trigger a change in map style
-                    html.Div(id='map_style_btn_switch_view'),   # Associated with the main map style button
-                    html.Div(id='alert_btn_switch_view'),   # Associated with the alert banner in risks mode
+                    # Associated with the main map style button
+                    html.Div(
+                        id='map_style_btn_switch_view',
+                        style={'display': 'none'}
+                    ),
+                    # Associated with the alert banner in risks mode
+                    html.Div(
+                        id='alert_btn_switch_view',
+                        style={'display': 'none'}
+                    ),
 
                     # Simple placeholder - Source of truth for the map style being viewed
-                    html.Div(id='current_map_style', children='alerts'),
+                    html.Div(id='current_map_style', children='alerts', style={'display': 'none'}),
+
+                    # Hidden html.Div storing the API client once instantiated with the user's credentials
+                    html.Div(id='instantiated_client', children='', style={'display': 'none'}),
 
                     # Hidden html.Div storing the URL address of the detection frame of the latest alert
                     html.Div(id='img_url', style={'display': 'none'})],
@@ -337,86 +423,8 @@ def Homepage():
             ]
         ),
 
-        dbc.Modal(
-            [
-                dbc.ModalBody(
-                        [
-                            html.Center(
-                                dbc.Col(
-                                    [
-                                        html.Div(style={'height': '10px'}),
-                                        html.Img(src=pyro_logo, width="190px"),
-                                        html.Div(style={'height': '30px'}),
-                                        dbc.FormGroup(
-                                            [
-                                                dbc.Input(
-                                                    id='username_input',
-                                                    type='text',
-                                                    placeholder="UTILISATEUR",
-                                                    style={'width': '250px'}
-                                                )
-                                            ],
-                                        ),
-                                        dbc.FormGroup(
-                                            [
-                                                dbc.Input(
-                                                    id='password_input',
-                                                    type='password',
-                                                    placeholder='MOT DE PASSE',
-                                                    style={'width': '250px'}
-                                                )
-                                            ],
-                                        ),
-                                    ],
-                                    align='center'
-                                ),
-                            ),
-                            html.Div(style={'height': '15px'}),
-                            html.Center(
-                                dbc.Button(
-                                    "Connexion",
-                                    id='send_form_button',
-                                    color='primary',
-                                    className='ml-3'
-                                ),
-                            ),
-                            html.Div(style={'height': '15px'}),
-                            html.Div(id='form_feedback_area')
-                        ],
-                        style={
-                            'background': '#F8FAFF'
-                        }
-                ),
-                # dbc.ModalBody(
-                #     html.Div(
-                #         [
-                #             html.P("Nom d'utilisateur :"),
-                #             dcc.Input(
-                #                 id='username_input',
-                #                 type='text',
-                #                 placeholder="Tapez votre nom d'utilisateur et appuyez sur 'Entrer'",
-                #                 debounce=True,
-                #                 style={'width': '500px'}
-                #             ),
-                #             html.Div(
-                #                 id='password_area'
-                #             )
-                #             ,
-                #         ],
-                #         id='login_area'
-                #     )
-                # ),
-                # dbc.ModalFooter(
-                #     html.Div(
-                #         id='close-login-area',
-                #         children=dbc.Button("Fermer", id="close-login", className="ml-auto"),
-                #         style={'display': 'none'}
-                #     )
-                # ),
-            ],
-            id="login-modal",
-            style={"max-width": "none", "width": "500px"}
-        ),
+        # Login model added here
+        build_login_modal(),
 
         # Meteo graphs added here
         display_meteo_graphs(display=False)
