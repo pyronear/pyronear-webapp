@@ -42,6 +42,10 @@ from utils import map_style, build_info_object, build_legend_box
 from services import api_client
 
 
+from geopy import Point
+from geopy.distance import geodesic
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # CONTENT
 
@@ -76,15 +80,7 @@ def build_departments_geojson():
 # Sites markers
 # The following block is used to fetch and display on the map the positions of detection units.
 
-# We import the cameras's positions from the API that locates the cameras
-# Fetching the response in a variable
-response = api_client.get_sites()
-
-# Getting the json data out of the response
-camera_positions = response.json()
-
-
-def build_sites_markers(dpt_code=None):
+def build_sites_markers(client, dpt_code=None):
     """
     This function reads the site markers by making the API, that contains all the
     information about the sites equipped with detection units.
@@ -103,6 +99,10 @@ def build_sites_markers(dpt_code=None):
     # We filter for the department of interest
     # camera_positions = camera_positions[camera_positions['Département'] == int(dpt_code)].copy()
 
+    response = client.get_sites()
+
+    sites = response.json()
+
     # Building alerts_markers objects and wraps them in a dl.LayerGroup object
     icon = {
         "iconUrl": '../assets/pyro_site_icon.png',
@@ -114,38 +114,88 @@ def build_sites_markers(dpt_code=None):
     # We build a list of markers containing the info of each site/camera
     markers = []
 
-    for i, row in camera_positions.iterrows():
-        lat = row['Latitude']
-        lon = row['Longitude']
-        site_name = row['Tours']
-        # nb_device = row['Nombres Devices']
-        markers.append(dl.Marker(id=f'site_{i}',    # Necessary to set an id for each marker to receive callbacks
-                                     position=(lat, lon),
-                                     icon=icon,
-                                     children=[
-                                        dl.Tooltip(site_name),
-                                        dl.Popup(
-                                            [
-                                                html.H2(f'Site {site_name}'),
-                                                html.P(f'Coordonnées : ({lat}, {lon})'),
-                                                html.P(f'Nombre de caméras : {4}'),
-                                                dcc.Markdown('---'),
-                                                dcc.Checklist(
-                                                    options=[
-                                                        {'label': 'Afficher la couverture des caméras', 'value': 1}
-                                                    ],
-                                                    value=[],
-                                                    id=f'checkbox_site_{i}',
-                                                    inputStyle={"margin-right": "10px"}
-                                                )
-                                            ]
-                                        )
-                                              ]
-                                    )
+    for site in sites:
+        site_id = site['id']
+        lat = site['lat']
+        lon = site['lon']
+        site_name = site['name']
+
+        response = client.get_site_devices(site_id)
+        devices = response.json()
+
+        nb_devices = len(devices)
+
+        # checklist_options = [{'label': f'Caméra #{device['id']}', 'value': device['id']} for device in devices]
+
+        markers.append(
+            dl.Marker(
+                id=f'site_{site_id}',    # Necessary to set an id for each marker to receive callbacks
+                position=(lat, lon),
+                icon=icon,
+                children=[
+                    dl.Tooltip(site_name),
+                    dl.Popup(
+                        [
+                            html.H2(f'Site {site_name}'),
+                            html.P(f'Coordonnées : ({lat}, {lon})'),
+                            html.P(f'Nombre de caméras : {nb_devices}'),
+                            dcc.Markdown('---'),
+                            dcc.Checklist(
+                                options=[
+                                    {'label': 'Caméra 1', 'value': 1},
+                                    {'label': 'Caméra 2', 'value': 2}
+                                ],
+                                # options = checklist_options,
+                                value=[],
+                                id=f'checkbox_site_{site_id}',
+                                labelStyle={'display': 'block'}
+                            )
+                        ]
+                    )
+                ]
             )
+        )
 
     # We group all dl.Marker objects in a dl.MarkerClusterGroup object and return it
-    return dl.MarkerClusterGroup(children=markers, id='sites_markers')
+    return markers
+
+
+def get_site_devices_data(client):
+    response = client.get_sites()
+
+    sites = response.json()
+
+    data = {site['id']: client.get_site_devices(site['id']).json() for site in sites}
+
+    return data
+
+
+def build_vision_polygon(site_lat, site_lon, yaw, opening_angle, distKm):
+
+    center = [site_lat, site_lon]
+
+    points1 = []
+    points2 = []
+
+    for i in reversed(range(1, opening_angle+1)):
+        yaw1 = (yaw - i/2) % 360
+        yaw2 = (yaw + i/2) % 360
+
+        point = geodesic(kilometers=distKm).destination(Point(site_lat, site_lon), yaw1)
+        points1.append([point.latitude, point.longitude])
+
+        point = geodesic(kilometers=distKm).destination(Point(site_lat, site_lon), yaw2)
+        points2.append([point.latitude, point.longitude])
+
+    points = [center] + points1 + list(reversed(points2))
+
+    polygon= dl.Polygon(
+        color="#ff7800",
+        opacity=0.5,
+        positions=points
+    )
+
+    return polygon
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -272,6 +322,26 @@ def define_map_zoom_center(n_clicks, alert_metadata):
     return center, zoom
 
 
+def build_alert_feedback_modal(alert_id):
+
+    return dbc.Modal(
+        [
+            dbc.ModalBody(
+                [
+                    html.P(f'This is the feedback modal for alert #{alert_id}')
+                ]
+            )
+        ],
+        id={
+            'type': 'alert_feedback_modal',
+            'index': alert_id
+        },
+        # backdrop='static',
+        keyboard=True,
+        style={"max-width": "none", "width": "500px"}
+    )
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Map instantiation
 # The last block gathers previously defined functions to output the "Alerts and Infrastructure" map.
@@ -288,7 +358,8 @@ def build_alerts_map():
                             build_departments_geojson(),
                             build_info_object(map_type='alerts'),
                             build_legend_box(map_type='alerts'),
-                            build_sites_markers(),
+                            dl.MarkerClusterGroup(id='sites_markers'),
+                            # build_sites_markers(camera_positions=camera_positions),
                             html.Div(id="live_alerts_marker"),
                             html.Div(id='fire_markers_alerts'),  # Will contain the past fire markers of the alerts map
                             dl.LayerGroup(id='device_polygons')],

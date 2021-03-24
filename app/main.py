@@ -39,7 +39,7 @@ from services import api_client
 
 # Main Dash imports, used to instantiate the web-app and create callbacks (ie. to generate interactivity)
 import dash
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL, MATCH
 from dash.exceptions import PreventUpdate
 
 # Various modules provided by Dash to build the page layout
@@ -53,16 +53,12 @@ from homepage import Homepage
 
 # From other Python files, we import some functions needed for interactivity
 from homepage import choose_map_style, display_alerts_frames
-from alerts import define_map_zoom_center, build_alerts_elements
+from alerts import define_map_zoom_center, build_alerts_elements, build_sites_markers, build_vision_polygon, get_site_devices_data, build_alert_feedback_modal
 from risks import build_risks_geojson_and_colorbar
 from utils import choose_layer_style, build_info_box, build_info_object,\
     build_live_alerts_metadata, build_historic_markers, build_legend_box
 
-from geopy import Point
-from geopy.distance import geodesic
-
 from pyroclient import Client
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # APP INSTANTIATION & OVERALL LAYOUT
@@ -76,7 +72,8 @@ app.config.suppress_callback_exceptions = True
 server = app.server   # Gunicorn will be looking for the server attribute of this module
 
 # We create a rough layout, filled with the content of the homepage
-app.layout = html.Div([dcc.Location(id='url', refresh=False),
+app.layout = html.Div([dcc.Store(id='site_devices_data'), # Cache component storing site devices data after log-in
+                       dcc.Location(id='url', refresh=False),
                        html.Div(id='page-content', children=Homepage())])
 
 # Cache configuration
@@ -89,10 +86,6 @@ cache = Cache(app.server, config={
 # Fetching reusable alert metadata
 alert_metadata = build_live_alerts_metadata()
 alert_id = alert_metadata["id"]
-
-site_devices = [{'id': 1, 'yaw': 30, 'opening_angle': 100, 'site_id': 1},
-                {'id': 2, 'yaw': 125, 'opening_angle': 100, 'site_id': 1}]
-distKm = 1.5
 
 # ----------------------------------------------------------------------------------------------------------------------
 # CALLBACKS
@@ -141,22 +134,24 @@ def change_layer_style(n_clicks=None):
 
 
 @app.callback(
-    [Output('login-modal', 'is_open'),
+    [Output('login_modal', 'is_open'),
      Output('form_feedback_area', 'children'),
-     Output('instantiated_client', 'children')],
+     Output('instantiated_client', 'children'),
+     Output('sites_markers', 'children'),
+     Output('site_devices_data', 'data')],
     Input('send_form_button', 'n_clicks'),
     [State('username_input', 'value'),
      State('password_input', 'value')]
 )
 def manage_login_modal(n_clicks, username, password):
     if n_clicks is None:
-        return True, None, ''
+        return True, None, '', '', ''
 
     form_feedback = [dcc.Markdown('---')]
 
     if username is None or password is None or len(username) == 0 or len(password) == 0:
         form_feedback.append(html.P("Il semble qu'il manque votre nom d'utilisateur et/ou votre mot de passe."))
-        return True, form_feedback, ''
+        return True, form_feedback, '', '', ''
 
     else:
 
@@ -166,17 +161,19 @@ def manage_login_modal(n_clicks, username, password):
                     credentials_login=username,
                     credentials_password=password
             )
+
             form_feedback.append(html.P("Vous êtes connecté, bienvenue sur la plateforme Pyronear !"))
-            return False, form_feedback, 'client'
+
+            return False, form_feedback, 'client', build_sites_markers(client=client), get_site_devices_data(client=client)
 
         except:
             form_feedback.append(html.P("Nom d'utilisateur ou mot de passe erroné."))
-            return True, form_feedback, ''
+            return True, form_feedback, '', '', ''
 
 
 @app.callback(
     Output('login_background', 'children'),
-    Input('login-modal', 'is_open')
+    Input('login_modal', 'is_open')
 )
 def clean_login_background(is_modal_opened):
     if is_modal_opened:
@@ -305,8 +302,8 @@ def change_zoom_center(n_clicks, map_style_button_label):
 
 @app.callback(
     Output('device_polygons', 'children'),
-    [Input(f'checkbox_site_{i}', 'value') for i in range(4)], # Replace 4 by the number of sites (ie. variabilize it)
-    [State(f'site_{i}', 'position') for i in range(4)] # Replace 4 by the number of sites (ie. variabilize it)
+    [Input(f'checkbox_site_{i + 1}', 'value') for i in range(4)], # Replace 4 by the number of sites (ie. variabilize it)
+    [State(f'site_{i + 1}', 'position') for i in range(4)] # Replace 4 by the number of sites (ie. variabilize it)
 )
 def display_device_polygons(*args):
     ctx = dash.callback_context
@@ -324,38 +321,30 @@ def display_device_polygons(*args):
                 lat = site_position[0]
                 lon = site_position[1]
 
-                # get_site_devices to be called here
-
                 yaw = 270
                 opening_angle = 90
-
-                center = [lat, lon]
-                points1 = []
-                points2 = []
-
-                for i in reversed(range(1, opening_angle+1)):
-                    yaw1 = (yaw - i/2) % 360
-                    yaw2 = (yaw + i/2) % 360
-
-                    point = geodesic(kilometers=distKm).destination(Point(lat, lon), yaw1)
-                    points1.append([point.latitude, point.longitude])
-
-                    point = geodesic(kilometers=distKm).destination(Point(lat, lon), yaw2)
-                    points2.append([point.latitude, point.longitude])
-
-                points = [center] + points1 + list(reversed(points2))
+                distKm = 2
 
                 polygons.append(
-                    dl.Polygon(
-                        color="#ff7800",
-                        opacity=0.5,
-                        positions=points,
-                        children=[dl.Popup(html.P('Device #1'))]
-                    )
+                    build_vision_polygon(
+                        site_lat=lat, site_lon=lon,
+                        yaw=yaw, opening_angle=opening_angle,
+                        distKm=distKm)
                 )
 
         return polygons
 
+@app.callback(
+    Output({'type': 'alert_feedback_modal', 'index': MATCH}, 'is_open'),
+    Input({'type': 'alert_feedback_button', 'index': MATCH}, 'n_clicks')
+)
+def display_alert_feedback_modal(n_clicks):
+    ctx = dash.callback_context
+
+    if not ctx.triggered or not n_clicks:
+        raise PreventUpdate
+
+    return True
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Callbacks related to the "Risk Score" page
@@ -589,7 +578,7 @@ def fetch_alert_status_metadata(n_intervals, map_style_button_label):
         last_alert = live_alerts.loc[live_alerts['id'].idxmax()]
 
         # Fetching the URL address of the frame associated with the last alert
-        img_url = api_client.get_media_url(last_alert['media_id']).json()["url"]
+        img_url = api_client.get_media_url(last_alert['media_id']).json().get("url", '')
 
         return build_alerts_elements(img_url, alert_status, alert_metadata, map_style)
 

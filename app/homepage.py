@@ -33,7 +33,7 @@ import dash_html_components as html
 from navbar import Navbar
 
 # Importing alerts map builder from alerts.py
-from alerts import build_alerts_map
+from alerts import build_alerts_map, build_alert_feedback_modal
 
 # Importing risks map and opacity slider builders from risks.py
 from risks import build_risks_map, build_opacity_slider
@@ -211,6 +211,8 @@ def display_alerts_frames(n_clicks=None, alert_metadata=None, img_url=None):
     if alert_metadata is None:
         alert_metadata = build_live_alerts_metadata()
 
+    alert_id = alert_metadata['id']
+
     # Defining style parameters for the detection frame
     frame_style = {
         'width': '50vh',
@@ -249,9 +251,17 @@ def display_alerts_frames(n_clicks=None, alert_metadata=None, img_url=None):
                 "Azimuth: {}".format(alert_metadata['azimuth'])]
         )
 
+        alert_feedback_button = html.Button(
+            "Enregistrer un retour sur cette alerte",
+            id={'type': 'alert_feedback_button', 'index': alert_id},
+            className="btn btn-danger"
+        )
+
+        alert_feedback_modal = build_alert_feedback_modal(alert_id)
+
         # Gathering all elements in a single html.Div component
         alert_frame_metadata = html.Div(
-            children=[frame_title, alert_frame, separator, alert_metadata_title, alert_metadata]
+            children=[frame_title, alert_frame, separator, alert_metadata_title, alert_metadata, alert_feedback_button, alert_feedback_modal]
         )
 
         return html.Div(alert_frame_metadata)
@@ -349,7 +359,7 @@ def build_login_modal():
                 style={'background': '#F8FAFF'}
             ),
         ],
-        id="login-modal",
+        id="login_modal",
         backdrop='static',
         keyboard=False,
         style={"max-width": "none", "width": "500px"}
@@ -430,6 +440,8 @@ def Homepage():
 
         # Login model added here
         build_login_modal(),
+
+        html.Div(id='alert_feedback_modal_container'),
 
         # Meteo graphs added here
         display_meteo_graphs(display=False)
