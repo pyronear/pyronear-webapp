@@ -24,3 +24,6 @@ RUN apt-get update \
 
 # copy project
 COPY app/ /usr/src/app/
+
+# command to run
+CMD gunicorn --workers 1 -b 0.0.0.0:${PORT:-5000} main:server
